@@ -1,0 +1,71 @@
+name: Pull Data and Publish
+on:
+    workflow_dispatch:
+    schedule:
+        - cron: "0 0 2 * *"
+jobs:
+    pull:
+        runs-on: ubuntu-latest
+        outputs:
+            data_changed: ${{ steps.check_diff.outputs.changed }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+            - name: Pull Update Data
+              run: npm run pull
+            - name: Check Changed
+              id: check_diff
+              run: |
+                  if git diff --quiet src/data.ts; then
+                    echo "changed=false" >> $GITHUB_OUTPUT
+                  else
+                    echo "changed=true" >> $GITHUB_OUTPUT
+                  fi
+    publish:
+        needs: pull
+        if: needs.pull.outputs.data_changed == 'true'
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+                  registry-url: "https://registry.npmjs.org"
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v3
+              with:
+                  version: "latest"
+            - name: Cache pnpm store
+              uses: actions/cache@v4
+              with:
+                  path: ~/.pnpm-store
+                  key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+                  restore-keys: ${{ runner.os }}-pnpm-store-
+            - name: Install Dependencies
+              run: pnpm install
+            - name: Build
+              run: npm run build
+            - name: Commit and Push Updated
+              run: |
+                  git add src/data.ts
+                  git commit -m ":bento: 自动更新数据"
+                  npm version patch -m ":bookmark: v%s" -s
+                  git push
+            - name: Publish
+              run: |
+                  npm publ --registry=https://npm.pkg.github.com
+                  sed -i 's/"name": "@pecasha\/china-railway-station"/"name": "china-railway-station"/' package.json
+                  npm pack
+                  TARBALL=$(ls *.tgz)
+                  npm publ $TARBALL --registry=https://registry.npmjs.org
+                  git checkout package.json
+                  rm $TARBALL
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+                  NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}

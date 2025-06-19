@@ -1,0 +1,39 @@
+{
+    "name": "@pecasha/china-railway-station",
+    "version": "1.0.0",
+    "type": "module",
+    "description": "中国铁路车站信息",
+    "author": {
+        "name": "Pecasha",
+        "email": "chihai@pecasha.com",
+        "url": "https://pecasha.com"
+    },
+    "sideEffects": false,
+    "license": "GPL-3.0-or-later",
+    "main": "./build/index.cjs",
+    "module": "./build/index.js",
+    "types": "./build/index.d.ts",
+    "exports": {
+        ".": {
+            "import": "./build/index.js",
+            "require": "./build/index.cjs"
+        },
+        "./package.json": "./package.json"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/pecasha/china-railway-station.git"
+    },
+    "files": [
+        "build"
+    ],
+    "scripts": {
+        "build": "tsdown",
+        "pull": "node ./script/pull.js",
+        "up": "pnpm update -i --latest"
+    },
+    "devDependencies": {
+        "tsdown": "^0.12.8",
+        "typescript": "^5.8.3"
+    }
+}
